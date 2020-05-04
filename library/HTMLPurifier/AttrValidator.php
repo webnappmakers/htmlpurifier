@@ -111,6 +111,15 @@ class HTMLPurifier_AttrValidator
                 $result = false;
             }
 
+            if (!$result) {
+                // definitions
+                $result = $this->checkDataAttributes($defs, $attr_key, $value, $config, $context);
+                if (!$result) {
+                    // global definitions
+                    $result = $this->checkDataAttributes($d_defs, $attr_key, $value, $config, $context);
+                }
+            }
+            
             // put the results into effect
             if ($result === false || $result === null) {
                 // this is a generic error message that should replaced
@@ -172,6 +181,39 @@ class HTMLPurifier_AttrValidator
 
     }
 
+    /**
+     * Method to check custom data attributes and include them in result
+     *
+     * @param $deflist
+     * @param $attr_key
+     * @param $value
+     * @param $config
+     * @param $context
+     * @return bool
+     */
+    private function checkDataAttributes($deflist, $attr_key, $value, $config, $context)
+    {
+        $result = false;
+        foreach ($deflist as $def_key => $def_value) {
+            if ($def_key === 'data-*') {
+
+                // found a wildcard
+                // does wildcard match this attr
+                $re = implode('(((?![\s=]).)+)',explode("*",$def_key));
+                preg_match('#^'.$re.'#',$attr_key,$wcout);
+                if (count($wcout)>0) {
+                    // the attribute matched against the wildcard definition
+                    $result = $deflist[$def_key]->validate(
+                        $value,
+                        $config,
+                        $context
+                    );
+                    break;
+                }
+            }
+        }
+        return $result;
+    }
 
 }
 
